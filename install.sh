@@ -8,10 +8,12 @@ fi
 
 # Reconfigure le clavier pour un changement persistant en français AZERTY
 echo "Configuration du clavier en français AZERTY..."
+setxkbmap fr
 debconf-set-selections <<< 'keyboard-configuration  keyboard-configuration/layoutcode string fr'
 debconf-set-selections <<< 'keyboard-configuration  keyboard-configuration/variantcode string azerty'
 dpkg-reconfigure -f noninteractive keyboard-configuration
 service keyboard-setup restart
+systemctl daemon-reload
 
 # Change le mot de passe pour l'utilisateur kali
 echo "Veuillez changer le mot de passe pour l'utilisateur kali :"
