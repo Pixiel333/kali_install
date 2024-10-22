@@ -6,19 +6,31 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+# Fonction pour rendre la configuration du clavier en AZERTY persistante
+configure_keyboard_fr() {
+  echo "Configuration du clavier en AZERTY français..."
+
+  # Modification du fichier /etc/default/keyboard pour rendre la configuration persistante
+  sed -i 's/XKBLAYOUT=.*/XKBLAYOUT="fr"/' /etc/default/keyboard
+  sed -i 's/XKBVARIANT=.*/XKBVARIANT="azerty"/' /etc/default/keyboard
+
+  # Recharger la configuration du clavier
+  dpkg-reconfigure -f noninteractive keyboard-configuration
+  service keyboard-setup restart
+  systemctl restart keyboard-setup
+  systemctl daemon-reload
+
+  # Application immédiate pour la session actuelle
+  setxkbmap fr
+}
+
 # Vérification du clavier en français
 current_layout=$(setxkbmap -query | grep layout | awk '{print $2}')
 if [ "$current_layout" != "fr" ]; then
   echo "Le clavier n'est pas en français. Voulez-vous le configurer en AZERTY français ? (y/n)"
   read change_layout
   if [ "$change_layout" == "y" ]; then
-    echo "Configuration du clavier en français AZERTY..."
-    setxkbmap fr
-    debconf-set-selections <<< 'keyboard-configuration  keyboard-configuration/layoutcode string fr'
-    debconf-set-selections <<< 'keyboard-configuration  keyboard-configuration/variantcode string azerty'
-    dpkg-reconfigure -f noninteractive keyboard-configuration
-    service keyboard-setup restart
-    systemctl daemon-reload
+    configure_keyboard_fr
   fi
 else
   echo "Le clavier est déjà en français."
@@ -50,54 +62,3 @@ apt update && apt upgrade -y
 install_oh_my_zsh() {
   local user=$1
   local user_home=$(eval echo ~$user)
-
-  if [ -d "$user_home/.oh-my-zsh/plugins/zsh-syntax-highlighting" ]; then
-    echo "Les plugins Zsh sont déjà installés pour $user."
-  else
-    echo "Installation de Oh My Zsh pour $user (sans changer le shell)..."
-    sudo -u $user sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh --skip-chsh)"
-
-    # Clonage des plugins de Zsh
-    sudo -u $user git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $user_home/.oh-my-zsh/plugins/zsh-syntax-highlighting
-    sudo -u $user git clone https://github.com/zsh-users/zsh-autosuggestions.git $user_home/.oh-my-zsh/plugins/zsh-autosuggestions
-    sudo -u $user git clone https://github.com/zsh-users/zsh-completions.git $user_home/.oh-my-zsh/plugins/zsh-completions
-    sudo -u $user git clone https://github.com/romkatv/powerlevel10k.git $user_home/.oh-my-zsh/themes/powerlevel10k
-
-    # Modification du fichier .zshrc pour ajouter les plugins et le thème
-    sudo -u $user sed -i 's/plugins=(git)/plugins=(git zsh-syntax-highlighting zsh-autosuggestions zsh-completions)/' $user_home/.zshrc
-    sudo -u $user sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="powerlevel10k\/powerlevel10k"/' $user_home/.zshrc
-  fi
-}
-
-# Installation de Oh My Zsh pour root
-echo "Voulez-vous installer et configurer Oh My Zsh pour root ? (y/n)"
-read install_root_zsh
-if [ "$install_root_zsh" == "y" ]; then
-  install_oh_my_zsh root
-fi
-
-# Installation de Oh My Zsh pour kali
-echo "Voulez-vous installer et configurer Oh My Zsh pour l'utilisateur kali ? (y/n)"
-read install_kali_zsh
-if [ "$install_kali_zsh" == "y" ]; then
-  install_oh_my_zsh kali
-fi
-
-# Nettoyage des paquets obsolètes
-echo "Nettoyage des paquets inutilisés..."
-apt autoremove -y
-
-# Définition du shell par défaut en Zsh à la fin pour root et kali
-echo "Voulez-vous définir Zsh comme shell par défaut pour root ? (y/n)"
-read change_root_shell
-if [ "$change_root_shell" == "y" ]; then
-  chsh -s $(which zsh) root
-fi
-
-echo "Voulez-vous définir Zsh comme shell par défaut pour kali ? (y/n)"
-read change_kali_shell
-if [ "$change_kali_shell" == "y" ]; then
-  chsh -s $(which zsh) kali
-fi
-
-echo "Setup terminé avec succès."
