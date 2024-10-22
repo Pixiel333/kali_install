@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # Vérifie si le script est exécuté en tant que root
 if [ "$EUID" -ne 0 ]; then
   echo "Ce script doit être exécuté en tant que root."
@@ -45,30 +46,44 @@ fi
 echo "Mise à jour du système..."
 apt update -y
 
-# Vérification si les fichiers git sont déjà téléchargés
-if [ -d "$HOME/.oh-my-zsh/plugins/zsh-syntax-highlighting" ]; then
-  echo "Les plugins Zsh sont déjà téléchargés."
-else
-  # Demande pour configurer Zsh
-  echo "Voulez-vous installer et configurer Oh My Zsh et ses plugins ? (y/n)"
-  read install_zsh
-  if [ "$install_zsh" == "y" ]; then
-    echo "Installation de Oh My Zsh et de ses plugins..."
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+# Fonction pour installer Oh My Zsh et les plugins pour un utilisateur spécifique
+install_oh_my_zsh() {
+  local user=$1
+  local user_home=$(eval echo ~$user)
+
+  if [ -d "$user_home/.oh-my-zsh/plugins/zsh-syntax-highlighting" ]; then
+    echo "Les plugins Zsh sont déjà installés pour $user."
+  else
+    echo "Installation de Oh My Zsh pour $user..."
+    sudo -u $user sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
     # Clonage des plugins de Zsh
-    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $HOME/.oh-my-zsh/plugins/zsh-syntax-highlighting
-    git clone https://github.com/zsh-users/zsh-autosuggestions.git $HOME/.oh-my-zsh/plugins/zsh-autosuggestions
-    git clone https://github.com/zsh-users/zsh-completions.git $HOME/.oh-my-zsh/plugins/zsh-completions
-    git clone https://github.com/romkatv/powerlevel10k.git $HOME/.oh-my-zsh/themes/powerlevel10k
+    sudo -u $user git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $user_home/.oh-my-zsh/plugins/zsh-syntax-highlighting
+    sudo -u $user git clone https://github.com/zsh-users/zsh-autosuggestions.git $user_home/.oh-my-zsh/plugins/zsh-autosuggestions
+    sudo -u $user git clone https://github.com/zsh-users/zsh-completions.git $user_home/.oh-my-zsh/plugins/zsh-completions
+    sudo -u $user git clone https://github.com/romkatv/powerlevel10k.git $user_home/.oh-my-zsh/themes/powerlevel10k
 
     # Modification du fichier .zshrc pour ajouter les plugins et le thème
-    sed -i 's/plugins=(git)/plugins=(git zsh-syntax-highlighting zsh-autosuggestions zsh-completions)/' ~/.zshrc
-    sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="powerlevel10k\/powerlevel10k"/' ~/.zshrc
+    sudo -u $user sed -i 's/plugins=(git)/plugins=(git zsh-syntax-highlighting zsh-autosuggestions zsh-completions)/' $user_home/.zshrc
+    sudo -u $user sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="powerlevel10k\/powerlevel10k"/' $user_home/.zshrc
 
     # Application des modifications
-    source ~/.zshrc
+    sudo -u $user source $user_home/.zshrc
   fi
+}
+
+# Installation de Oh My Zsh pour root
+echo "Voulez-vous installer et configurer Oh My Zsh pour root ? (y/n)"
+read install_root_zsh
+if [ "$install_root_zsh" == "y" ]; then
+  install_oh_my_zsh root
+fi
+
+# Installation de Oh My Zsh pour kali
+echo "Voulez-vous installer et configurer Oh My Zsh pour l'utilisateur kali ? (y/n)"
+read install_kali_zsh
+if [ "$install_kali_zsh" == "y" ]; then
+  install_oh_my_zsh kali
 fi
 
 # Nettoyage des paquets obsolètes
