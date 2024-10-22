@@ -44,7 +44,7 @@ fi
 
 # Mise à jour du système
 echo "Mise à jour du système..."
-apt update -y
+apt update && apt upgrade -y
 
 # Fonction pour installer Oh My Zsh et les plugins pour un utilisateur spécifique
 install_oh_my_zsh() {
@@ -54,8 +54,8 @@ install_oh_my_zsh() {
   if [ -d "$user_home/.oh-my-zsh/plugins/zsh-syntax-highlighting" ]; then
     echo "Les plugins Zsh sont déjà installés pour $user."
   else
-    echo "Installation de Oh My Zsh pour $user..."
-    sudo -u $user sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    echo "Installation de Oh My Zsh pour $user (sans changer le shell)..."
+    sudo -u $user sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh --skip-chsh)"
 
     # Clonage des plugins de Zsh
     sudo -u $user git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $user_home/.oh-my-zsh/plugins/zsh-syntax-highlighting
@@ -66,9 +66,6 @@ install_oh_my_zsh() {
     # Modification du fichier .zshrc pour ajouter les plugins et le thème
     sudo -u $user sed -i 's/plugins=(git)/plugins=(git zsh-syntax-highlighting zsh-autosuggestions zsh-completions)/' $user_home/.zshrc
     sudo -u $user sed -i 's/ZSH_THEME="robbyrussell"/ZSH_THEME="powerlevel10k\/powerlevel10k"/' $user_home/.zshrc
-
-    # Application des modifications
-    sudo -u $user source $user_home/.zshrc
   fi
 }
 
@@ -89,5 +86,18 @@ fi
 # Nettoyage des paquets obsolètes
 echo "Nettoyage des paquets inutilisés..."
 apt autoremove -y
+
+# Définition du shell par défaut en Zsh à la fin pour root et kali
+echo "Voulez-vous définir Zsh comme shell par défaut pour root ? (y/n)"
+read change_root_shell
+if [ "$change_root_shell" == "y" ]; then
+  chsh -s $(which zsh) root
+fi
+
+echo "Voulez-vous définir Zsh comme shell par défaut pour kali ? (y/n)"
+read change_kali_shell
+if [ "$change_kali_shell" == "y" ]; then
+  chsh -s $(which zsh) kali
+fi
 
 echo "Setup terminé avec succès."
